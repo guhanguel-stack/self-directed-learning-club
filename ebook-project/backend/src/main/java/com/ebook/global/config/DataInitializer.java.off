@@ -1,0 +1,143 @@
+package com.ebook.global.config;
+
+import com.ebook.domain.book.entity.Book;
+import com.ebook.domain.book.repository.BookRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+/**
+ * 앱 최초 실행 시 퍼블릭 도메인 책 데이터를 자동으로 삽입합니다.
+ * setup_books.py 스크립트로 S3 업로드 완료 후 아래 epub_url, cover_image_url 값을
+ * 실제 S3 키로 채워주세요.
+ *
+ * S3 키 형식:
+ *   epub      → epubs/{gutenberg_id}.epub
+ *   표지 이미지 → covers/{gutenberg_id}.jpg
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class DataInitializer implements ApplicationRunner {
+
+    private final BookRepository bookRepository;
+
+    @Override
+    public void run(ApplicationArguments args) {
+        if (bookRepository.count() > 0) {
+            log.info("이미 도서 데이터가 존재합니다. 초기화를 건너뜁니다.");
+            return;
+        }
+
+        log.info("퍼블릭 도메인 도서 데이터를 삽입합니다...");
+
+        List<Book> books = List.of(
+            Book.builder()
+                .title("Pride and Prejudice")
+                .author("Jane Austen")
+                .description("A romantic novel that charts the emotional development of Elizabeth Bennet.")
+                .coverImageUrl("covers/1342.jpg")
+                .epubUrl("epubs/1342.epub")
+                .originalPrice(1000L)
+                .category(Book.Category.NOVEL)
+                .build(),
+
+            Book.builder()
+                .title("Alice's Adventures in Wonderland")
+                .author("Lewis Carroll")
+                .description("A young girl named Alice falls through a rabbit hole into a fantasy world.")
+                .coverImageUrl("covers/11.jpg")
+                .epubUrl("epubs/11.epub")
+                .originalPrice(800L)
+                .category(Book.Category.NOVEL)
+                .build(),
+
+            Book.builder()
+                .title("Frankenstein")
+                .author("Mary Shelley")
+                .description("A scientist creates a sapient creature in an unorthodox scientific experiment.")
+                .coverImageUrl("covers/84.jpg")
+                .epubUrl("epubs/84.epub")
+                .originalPrice(1200L)
+                .category(Book.Category.NOVEL)
+                .build(),
+
+            Book.builder()
+                .title("The Adventures of Sherlock Holmes")
+                .author("Arthur Conan Doyle")
+                .description("Twelve stories featuring the brilliant detective Sherlock Holmes.")
+                .coverImageUrl("covers/1661.jpg")
+                .epubUrl("epubs/1661.epub")
+                .originalPrice(1500L)
+                .category(Book.Category.NOVEL)
+                .build(),
+
+            Book.builder()
+                .title("The Picture of Dorian Gray")
+                .author("Oscar Wilde")
+                .description("A philosophical novel about a handsome man whose portrait ages while he remains young.")
+                .coverImageUrl("covers/174.jpg")
+                .epubUrl("epubs/174.epub")
+                .originalPrice(1000L)
+                .category(Book.Category.NOVEL)
+                .build(),
+
+            Book.builder()
+                .title("A Tale of Two Cities")
+                .author("Charles Dickens")
+                .description("A historical novel set in London and Paris before and during the French Revolution.")
+                .coverImageUrl("covers/98.jpg")
+                .epubUrl("epubs/98.epub")
+                .originalPrice(1300L)
+                .category(Book.Category.HISTORY)
+                .build(),
+
+            Book.builder()
+                .title("Moby Dick")
+                .author("Herman Melville")
+                .description("The tale of the obsessive quest of Ahab for revenge on the whale Moby Dick.")
+                .coverImageUrl("covers/2701.jpg")
+                .epubUrl("epubs/2701.epub")
+                .originalPrice(1200L)
+                .category(Book.Category.NOVEL)
+                .build(),
+
+            Book.builder()
+                .title("A Modest Proposal")
+                .author("Jonathan Swift")
+                .description("A satirical essay suggesting that the poor Irish sell their children as food.")
+                .coverImageUrl("covers/1080.jpg")
+                .epubUrl("epubs/1080.epub")
+                .originalPrice(500L)
+                .category(Book.Category.ESSAY)
+                .build(),
+
+            Book.builder()
+                .title("Great Expectations")
+                .author("Charles Dickens")
+                .description("The story of the orphan Pip and his journey from humble beginnings to wealth.")
+                .coverImageUrl("covers/1400.jpg")
+                .epubUrl("epubs/1400.epub")
+                .originalPrice(1100L)
+                .category(Book.Category.NOVEL)
+                .build(),
+
+            Book.builder()
+                .title("Little Women")
+                .author("Louisa May Alcott")
+                .description("Follows the lives of the four March sisters as they grow from childhood to womanhood.")
+                .coverImageUrl("covers/514.jpg")
+                .epubUrl("epubs/514.epub")
+                .originalPrice(900L)
+                .category(Book.Category.NOVEL)
+                .build()
+        );
+
+        bookRepository.saveAll(books);
+        log.info("{}권의 도서 데이터가 삽입되었습니다.", books.size());
+    }
+}
