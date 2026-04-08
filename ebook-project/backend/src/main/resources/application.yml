@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ebook}
+    username: ${SPRING_DATASOURCE_USERNAME:admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:create}
+    show-sql: true
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  data:
+    redis:
+      url: ${SPRING_DATA_REDIS_URL:redis://localhost:6379}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:false}
+
+  sql:
+    init:
+      mode: always
+
+jwt:
+  secret: ${JWT_SECRET:3c9a9729364c7e01c02cefa5e2e4ef01ad5fc36093fa11f94266e7774b627541}
+  access-token-expiration: 1800000
+  refresh-token-expiration: 604800000
+
+aws:
+  s3:
+    bucket-name: ${AWS_BUCKET:realhangeol-ebook-bucket-2026}
+    region: ${AWS_REGION:ap-northeast-2}
+  credentials:
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+
+server:
+  port: 8080
+
