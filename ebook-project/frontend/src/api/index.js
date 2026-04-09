@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getAccessToken, getRefreshToken, setTokens, removeTokens } from '../utils/token';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   timeout: 10000,
 });
 
@@ -26,7 +26,7 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = getRefreshToken();
-        const response = await axios.post('http://localhost:8080/api/auth/reissue', null, {
+        const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/auth/reissue`, null, {
           headers: { 'Refresh-Token': refreshToken },
         });
 
