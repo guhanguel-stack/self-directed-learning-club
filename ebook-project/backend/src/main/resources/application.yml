@@ -21,6 +21,11 @@ spring:
       ssl:
         enabled: ${REDIS_SSL_ENABLED:false}
 
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
   sql:
     init:
       mode: always

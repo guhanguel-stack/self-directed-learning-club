@@ -27,7 +27,11 @@ public class S3Service {
 
     // 파일 업로드 후 S3 키(경로) 반환
     public String uploadFile(MultipartFile file, String folder) throws IOException {
-        String key = folder + "/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+        // 한글/특수문자 제거 후 UUID로 고유 파일명 생성
+        String original = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
+        String ext = original.contains(".") ? original.substring(original.lastIndexOf('.')) : "";
+        String safeFilename = UUID.randomUUID() + ext;  // 예: a1b2c3d4.pdf
+        String key = folder + "/" + safeFilename;
 
         s3Client.putObject(
                 PutObjectRequest.builder()
