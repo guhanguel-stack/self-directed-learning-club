@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
-import { logout } from '../../api/auth';
+import { logout, chargePoint } from '../../api/auth';
 import { formatPrice } from '../../utils/format';
 
 const Header = () => {
@@ -9,6 +9,27 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showChargeModal, setShowChargeModal] = useState(false);
+  const [chargeAmount, setChargeAmount] = useState('');
+  const [charging, setCharging] = useState(false);
+  const { updatePoint } = useAuthStore();
+
+  const handleCharge = async () => {
+    const amount = Number(chargeAmount);
+    if (!amount || amount <= 0) return alert('충전할 금액을 입력해주세요.');
+    setCharging(true);
+    try {
+      await chargePoint(amount);
+      updatePoint((user?.pointBalance || 0) + amount);
+      setShowChargeModal(false);
+      setChargeAmount('');
+      alert(`${formatPrice(amount)}P 충전 완료!`);
+    } catch (e) {
+      alert('충전에 실패했습니다.');
+    } finally {
+      setCharging(false);
+    }
+  };
 
   const handleLogout = async () => {
     try { await logout(); } finally {
@@ -51,9 +72,13 @@ const Header = () => {
               {navLink('/my-library', '내 책장')}
               {navLink('/exchange',   '교환 현황')}
               {navLink('/library',    '내 서재')}
-              <span className="text-indigo-600 font-semibold text-sm">
+              <button
+                onClick={() => setShowChargeModal(true)}
+                className="text-indigo-600 font-semibold text-sm hover:underline"
+                title="클릭하여 포인트 충전"
+              >
                 {formatPrice(user?.pointBalance)}P
-              </span>
+              </button>
               <span className="text-gray-500 text-sm">{user?.nickname}</span>
               <button
                 onClick={handleLogout}
@@ -108,6 +133,51 @@ const Header = () => {
         </div>
       )}
     </header>
+
+    {/* 포인트 충전 모달 */}
+    {showChargeModal && (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="bg-white rounded-2xl p-6 w-80 shadow-xl">
+          <h2 className="text-lg font-bold text-gray-800 mb-1">포인트 충전</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            현재 보유: <span className="font-semibold text-indigo-600">{formatPrice(user?.pointBalance)}P</span>
+          </p>
+          <div className="flex gap-2 mb-3">
+            {[1000, 3000, 5000, 10000].map(v => (
+              <button
+                key={v}
+                onClick={() => setChargeAmount(String(v))}
+                className="flex-1 text-xs border border-indigo-200 text-indigo-600 rounded-lg py-1.5 hover:bg-indigo-50 transition"
+              >
+                {formatPrice(v)}P
+              </button>
+            ))}
+          </div>
+          <input
+            type="number"
+            value={chargeAmount}
+            onChange={e => setChargeAmount(e.target.value)}
+            placeholder="직접 입력 (P)"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setShowChargeModal(false); setChargeAmount(''); }}
+              className="flex-1 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleCharge}
+              disabled={charging}
+              className="flex-1 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {charging ? '충전 중...' : '충전하기'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   );
 };
 
