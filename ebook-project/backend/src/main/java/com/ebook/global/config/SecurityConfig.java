@@ -36,9 +36,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/books").permitAll()
-                        .requestMatchers("/api/books/{id}").permitAll()
+                        .requestMatchers("/api/books/**").permitAll()
                         .requestMatchers("/api/used").permitAll()
-                        .requestMatchers("/api/used/{id}").permitAll()
+                        .requestMatchers("/api/used/**").permitAll()
+                        .requestMatchers("/api/users/check-nickname").permitAll()
+                        // 서점 목록/상세는 비로그인도 열람 가능
+                        .requestMatchers("GET", "/api/my-books").permitAll()
+                        .requestMatchers("GET", "/api/my-books/*").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtFilter(jwtProvider),
@@ -55,7 +59,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173")); // React 개발 서버
+        config.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "https://*.vercel.app"       // Vercel 배포 프론트엔드
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
