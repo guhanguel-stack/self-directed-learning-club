@@ -1,6 +1,7 @@
 package com.ebook.domain.library.dto;
 
 import com.ebook.domain.library.entity.Library;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ public class LibraryResponse {
     private String title;
     private String author;
     private String coverImageUrl;
+    @JsonProperty("isAvailable")
     private boolean isAvailable;
     private LocalDateTime purchasedAt;
 
