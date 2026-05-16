@@ -10,7 +10,7 @@ const ExchangeModal = ({ listing, onClose, onSuccess }) => {
 
   useEffect(() => {
     getMyLibrary()
-      .then((res) => setMyLibrary(res.data.data.filter((b) => b.isAvailable)))
+      .then((res) => setMyLibrary(res.data.data || []))
       .catch(() => setMyLibrary([]))
       .finally(() => setLoading(false));
   }, []);
