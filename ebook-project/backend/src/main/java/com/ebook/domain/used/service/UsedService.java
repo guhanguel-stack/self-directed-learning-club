@@ -177,9 +177,14 @@ public class UsedService {
         // 신청자가 해당 책을 보유 중인지 확인
         Library offeredLibrary = libraryRepository.findByUserIdAndBookId(buyerId, request.getOfferedBookId())
                 .orElseThrow(() -> CustomException.badRequest("보유하지 않은 도서입니다."));
-        if (!offeredLibrary.isAvailable()) {
-            throw CustomException.badRequest("이미 중고 등록 중인 도서는 교환 제시할 수 없습니다.");
-        }
+
+        // 제시 책이 중고 등록 중이면 자동으로 해당 등록을 취소
+        usedListingRepository.findBySellerIdAndBookIdAndStatus(
+                buyerId, request.getOfferedBookId(), UsedListing.ListingStatus.ACTIVE)
+            .ifPresent(existingListing -> {
+                existingListing.cancel();
+                offeredLibrary.markAsAvailable();
+            });
 
         User buyer = userRepository.findById(buyerId)
                 .orElseThrow(() -> CustomException.notFound("사용자를 찾을 수 없습니다."));

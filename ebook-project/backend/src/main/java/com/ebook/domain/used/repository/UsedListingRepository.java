@@ -7,7 +7,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
+
 public interface UsedListingRepository extends JpaRepository<UsedListing, Long> {
+
+    Optional<UsedListing> findBySellerIdAndBookIdAndStatus(
+            Long sellerId, Long bookId, UsedListing.ListingStatus status);
 
     @Query("SELECT u FROM UsedListing u JOIN u.book b WHERE " +
            "u.status = 'ACTIVE' AND " +

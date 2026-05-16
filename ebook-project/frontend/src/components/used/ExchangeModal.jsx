@@ -90,36 +90,42 @@ const ExchangeModal = ({ listing, onClose, onSuccess }) => {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2">
-              {myLibrary.map((book) => (
-                <button
-                  key={book.bookId}
-                  onClick={() => setSelectedBookId(book.bookId)}
-                  className={`flex gap-3 items-center p-3 rounded-xl border-2 text-left transition-all w-full ${
-                    selectedBookId === book.bookId
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {book.coverImageUrl ? (
-                    <img
-                      src={book.coverImageUrl}
-                      alt={book.title}
-                      className="w-10 h-14 object-cover rounded flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-14 bg-gray-200 rounded flex items-center justify-center text-base flex-shrink-0">
-                      📖
+              {myLibrary.map((book) => {
+                const isListed = book.available === false;
+                return (
+                  <button
+                    key={book.bookId}
+                    onClick={() => setSelectedBookId(book.bookId)}
+                    className={`flex gap-3 items-center p-3 rounded-xl border-2 text-left transition-all w-full ${
+                      selectedBookId === book.bookId
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {book.coverImageUrl ? (
+                      <img
+                        src={book.coverImageUrl}
+                        alt={book.title}
+                        className="w-10 h-14 object-cover rounded flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-14 bg-gray-200 rounded flex items-center justify-center text-base flex-shrink-0">
+                        📖
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate">{book.title}</p>
+                      <p className="text-xs text-gray-500 truncate">{book.author}</p>
+                      {isListed && (
+                        <p className="text-xs text-orange-500 mt-0.5">중고 등록 중 · 선택 시 등록 자동 취소</p>
+                      )}
                     </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate">{book.title}</p>
-                    <p className="text-xs text-gray-500 truncate">{book.author}</p>
-                  </div>
-                  {selectedBookId === book.bookId && (
-                    <span className="text-green-500 text-lg flex-shrink-0">✓</span>
-                  )}
-                </button>
-              ))}
+                    {selectedBookId === book.bookId && (
+                      <span className="text-green-500 text-lg flex-shrink-0">✓</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
