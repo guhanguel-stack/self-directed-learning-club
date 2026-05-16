@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { register, checkNickname } from '../api/auth';
+import { register, checkNickname, warmupServer } from '../api/auth';
 
 const PW_REGEX = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
 
@@ -13,9 +13,11 @@ const Register = () => {
     nickname: '',
   });
   const [errors, setErrors] = useState({});
-  const [nicknameStatus, setNicknameStatus] = useState(null); // null | 'available' | 'taken' | 'checking'
+  const [nicknameStatus, setNicknameStatus] = useState(null); // null | 'available' | 'taken' | 'checking' | 'slow'
   const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => { warmupServer(); }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -57,13 +59,19 @@ const Register = () => {
       return;
     }
     setNicknameStatus('checking');
+    const slowTimer = setTimeout(() => setNicknameStatus('slow'), 5000);
     try {
       const res = await checkNickname(nick);
       const available = res.data?.data?.available ?? res.data?.available;
       setNicknameStatus(available ? 'available' : 'taken');
-    } catch {
+    } catch (err) {
       setNicknameStatus(null);
-      setErrors((prev) => ({ ...prev, nickname: '중복 확인 중 오류가 발생했습니다.' }));
+      const msg = err.code === 'ECONNABORTED'
+        ? '서버 응답이 느립니다. 잠시 후 다시 시도해주세요.'
+        : '중복 확인 중 오류가 발생했습니다.';
+      setErrors((prev) => ({ ...prev, nickname: msg }));
+    } finally {
+      clearTimeout(slowTimer);
     }
   };
 
@@ -235,10 +243,10 @@ const Register = () => {
               <button
                 type="button"
                 onClick={handleCheckNickname}
-                disabled={nicknameStatus === 'checking'}
+                disabled={nicknameStatus === 'checking' || nicknameStatus === 'slow'}
                 className="px-4 py-2.5 text-sm font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 disabled:opacity-50 whitespace-nowrap transition"
               >
-                {nicknameStatus === 'checking' ? '확인 중...' : '중복 확인'}
+                {nicknameStatus === 'slow' ? '서버 시작 중...' : nicknameStatus === 'checking' ? '확인 중...' : '중복 확인'}
               </button>
             </div>
             {nicknameStatus === 'available' && (
