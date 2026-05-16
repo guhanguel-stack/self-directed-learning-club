@@ -7,7 +7,7 @@ import useAuthStore from '../store/authStore';
 
 const UsedMarket = () => {
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuthStore();
+  const { isLoggedIn, user } = useAuthStore();
   const [listings, setListings] = useState([]);
   const [keyword, setKeyword] = useState('');
   const [priceType, setPriceType] = useState('');
@@ -46,6 +46,10 @@ const UsedMarket = () => {
     setPage(0);
     fetchListings();
   };
+
+  const visibleListings = listings.filter(
+    (l) => !user || l.sellerNickname !== user.nickname
+  );
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -96,11 +100,11 @@ const UsedMarket = () => {
 
       {loading ? (
         <p className="text-center text-gray-400 py-20">로딩 중...</p>
-      ) : listings.length === 0 ? (
+      ) : visibleListings.length === 0 ? (
         <p className="text-center text-gray-400 py-20">등록된 중고 도서가 없습니다.</p>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {listings.map((listing) => (
+          {visibleListings.map((listing) => (
             <UsedCard key={listing.listingId} listing={listing} onExchange={handleExchangeClick} />
           ))}
         </div>

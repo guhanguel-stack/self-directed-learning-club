@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 import { logout, chargePoint } from '../../api/auth';
+import { getMyTrades } from '../../api/used';
 import { formatPrice } from '../../utils/format';
 
 const Header = () => {
@@ -12,7 +13,23 @@ const Header = () => {
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [chargeAmount, setChargeAmount] = useState('');
   const [charging, setCharging] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const { updatePoint } = useAuthStore();
+
+  // 페이지 이동마다 미수락 교환 요청 수 갱신
+  useEffect(() => {
+    if (!isLoggedIn || !user) { setPendingCount(0); return; }
+    getMyTrades()
+      .then((res) => {
+        const count = (res.data.data || []).filter(
+          (t) => t.sellerNickname === user.nickname &&
+                 t.tradeType === 'EXCHANGE' &&
+                 t.status === 'PENDING'
+        ).length;
+        setPendingCount(count);
+      })
+      .catch(() => {});
+  }, [isLoggedIn, user, location.pathname]);
 
   const handleCharge = async () => {
     const amount = Number(chargeAmount);
@@ -44,9 +61,7 @@ const Header = () => {
     <Link
       to={to}
       className={`text-sm font-medium transition ${
-        isActive(to)
-          ? 'text-indigo-600'
-          : 'text-gray-600 hover:text-indigo-600'
+        isActive(to) ? 'text-indigo-600' : 'text-gray-600 hover:text-indigo-600'
       }`}
     >
       {label}
@@ -64,13 +79,28 @@ const Header = () => {
 
         {/* 데스크탑 nav */}
         <nav className="hidden md:flex items-center gap-6">
-          {navLink('/books',      '서점')}
-          {navLink('/used',       '중고마켓')}
+          {navLink('/books', '서점')}
+          {navLink('/used',  '중고마켓')}
 
           {isLoggedIn ? (
             <>
-              {navLink('/library',    '내 서재')}
-              {navLink('/exchange',   '교환 현황')}
+              {navLink('/library', '내 서재')}
+
+              {/* 거래 내역 — 미수락 요청 뱃지 */}
+              <Link
+                to="/trades"
+                className={`relative text-sm font-medium transition ${
+                  isActive('/trades') ? 'text-indigo-600' : 'text-gray-600 hover:text-indigo-600'
+                }`}
+              >
+                거래 내역
+                {pendingCount > 0 && (
+                  <span className="absolute -top-1.5 -right-3.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                    {pendingCount}
+                  </span>
+                )}
+              </Link>
+
               <button
                 onClick={() => setShowChargeModal(true)}
                 className="text-indigo-600 font-semibold text-sm hover:underline"
@@ -112,12 +142,19 @@ const Header = () => {
       {/* 모바일 메뉴 */}
       {menuOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white px-6 py-4 flex flex-col gap-4">
-          <Link to="/books"      onClick={() => setMenuOpen(false)} className="text-sm text-gray-700">서점</Link>
-          <Link to="/used"       onClick={() => setMenuOpen(false)} className="text-sm text-gray-700">중고마켓</Link>
+          <Link to="/books" onClick={() => setMenuOpen(false)} className="text-sm text-gray-700">서점</Link>
+          <Link to="/used"  onClick={() => setMenuOpen(false)} className="text-sm text-gray-700">중고마켓</Link>
           {isLoggedIn ? (
             <>
-              <Link to="/library"    onClick={() => setMenuOpen(false)} className="text-sm text-gray-700">내 서재</Link>
-              <Link to="/exchange"   onClick={() => setMenuOpen(false)} className="text-sm text-gray-700">교환 현황</Link>
+              <Link to="/library" onClick={() => setMenuOpen(false)} className="text-sm text-gray-700">내 서재</Link>
+              <Link to="/trades"  onClick={() => setMenuOpen(false)} className="text-sm text-gray-700 flex items-center gap-2">
+                거래 내역
+                {pendingCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
+                    {pendingCount}
+                  </span>
+                )}
+              </Link>
               <button
                 onClick={() => { setMenuOpen(false); setShowChargeModal(true); }}
                 className="text-sm text-indigo-600 font-semibold text-left"
@@ -137,7 +174,7 @@ const Header = () => {
       )}
     </header>
 
-    {/* 포인트 충전 모달 — header 와 Fragment로 묶음 */}
+    {/* 포인트 충전 모달 */}
     {showChargeModal && (
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
         <div className="bg-white rounded-2xl p-6 w-80 shadow-xl">

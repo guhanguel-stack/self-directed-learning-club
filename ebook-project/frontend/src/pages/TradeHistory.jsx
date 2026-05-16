@@ -78,7 +78,7 @@ const TradeHistory = () => {
     <div className="max-w-3xl mx-auto px-6 py-10">
       <h1 className="text-2xl font-bold mb-6">거래 내역</h1>
 
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-gray-200 mb-1">
         <button
           onClick={() => setTab('received')}
           className={`px-5 py-3 text-sm font-medium border-b-2 transition ${
@@ -105,6 +105,11 @@ const TradeHistory = () => {
           보낸 거래
         </button>
       </div>
+      <p className="text-xs text-gray-400 mb-6">
+        {tab === 'received'
+          ? '내 책에 들어온 교환 요청입니다. 수락하면 책이 즉시 교환됩니다.'
+          : '내가 보낸 교환 요청입니다. 상대방이 수락해야 교환이 완료됩니다.'}
+      </p>
 
       {current.length === 0 ? (
         <div className="text-center py-20">
