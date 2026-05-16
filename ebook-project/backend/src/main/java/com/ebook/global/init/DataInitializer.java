@@ -1,0 +1,183 @@
+package com.ebook.global.init;
+
+import com.ebook.domain.book.entity.Book;
+import com.ebook.domain.book.repository.BookRepository;
+import com.ebook.domain.mybook.entity.MyBook;
+import com.ebook.domain.mybook.repository.MyBookRepository;
+import com.ebook.domain.user.entity.User;
+import com.ebook.domain.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * 앱 시작 시 저작권 만료 도서 10권을 시드 데이터로 추가합니다.
+ * 이미 system@ebook.com 계정이 존재하면 스킵합니다.
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class DataInitializer implements ApplicationRunner {
+
+    private final UserRepository userRepository;
+    private final MyBookRepository myBookRepository;
+    private final BookRepository bookRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    private static final String SYSTEM_EMAIL = "system@ebook.com";
+
+    @Override
+    @Transactional
+    public void run(ApplicationArguments args) {
+        seedBooks();
+        seedMyBooks();
+    }
+
+    private void seedBooks() {
+        if (bookRepository.count() > 0) {
+            log.info("서점 도서 데이터가 이미 존재합니다. 스킵합니다.");
+            return;
+        }
+
+        List<SeedBookstore> books = List.of(
+            new SeedBookstore("Pride and Prejudice", "Jane Austen",
+                "A romantic novel that charts the emotional development of the protagonist Elizabeth Bennet.",
+                "covers/1342.jpg", "epubs/1342.epub", 1000L, Book.Category.NOVEL),
+            new SeedBookstore("Alice's Adventures in Wonderland", "Lewis Carroll",
+                "A young girl named Alice falls through a rabbit hole into a fantasy world.",
+                "covers/11.jpg", "epubs/11.epub", 800L, Book.Category.NOVEL),
+            new SeedBookstore("Frankenstein", "Mary Shelley",
+                "A scientist creates a sapient creature in an unorthodox scientific experiment.",
+                "covers/84.jpg", "epubs/84.epub", 1200L, Book.Category.NOVEL),
+            new SeedBookstore("The Adventures of Sherlock Holmes", "Arthur Conan Doyle",
+                "Twelve stories featuring the brilliant detective Sherlock Holmes.",
+                "covers/1661.jpg", "epubs/1661.epub", 1500L, Book.Category.NOVEL),
+            new SeedBookstore("The Picture of Dorian Gray", "Oscar Wilde",
+                "A philosophical novel about a handsome man whose portrait ages while he remains young.",
+                "covers/174.jpg", "epubs/174.epub", 1000L, Book.Category.NOVEL),
+            new SeedBookstore("A Tale of Two Cities", "Charles Dickens",
+                "A historical novel set in London and Paris before and during the French Revolution.",
+                "covers/98.jpg", "epubs/98.epub", 1300L, Book.Category.HISTORY),
+            new SeedBookstore("Moby Dick", "Herman Melville",
+                "The tale of the obsessive quest of Ahab for revenge on the whale Moby Dick.",
+                "covers/2701.jpg", "epubs/2701.epub", 1200L, Book.Category.NOVEL),
+            new SeedBookstore("A Modest Proposal", "Jonathan Swift",
+                "A satirical essay suggesting that the poor Irish sell their children as food.",
+                "covers/1080.jpg", "epubs/1080.epub", 500L, Book.Category.ESSAY),
+            new SeedBookstore("Great Expectations", "Charles Dickens",
+                "The story of the orphan Pip and his journey from humble beginnings to wealth.",
+                "covers/1400.jpg", "epubs/1400.epub", 1100L, Book.Category.NOVEL),
+            new SeedBookstore("Little Women", "Louisa May Alcott",
+                "Follows the lives of the four March sisters as they grow from childhood to womanhood.",
+                "covers/514.jpg", "epubs/514.epub", 900L, Book.Category.NOVEL)
+        );
+
+        for (SeedBookstore s : books) {
+            bookRepository.save(Book.builder()
+                    .title(s.title())
+                    .author(s.author())
+                    .description(s.description())
+                    .coverImageUrl(s.coverImageUrl())
+                    .epubUrl(s.epubUrl())
+                    .originalPrice(s.price())
+                    .category(s.category())
+                    .build());
+        }
+
+        log.info("서점 도서 시드 데이터 10권 추가 완료.");
+    }
+
+    private void seedMyBooks() {
+        if (userRepository.existsByEmail(SYSTEM_EMAIL)) {
+            log.info("시드 데이터가 이미 존재합니다. 스킵합니다.");
+            return;
+        }
+
+        User system = User.builder()
+                .email(SYSTEM_EMAIL)
+                .password(passwordEncoder.encode("system_password_not_used"))
+                .nickname("EBookMarket")
+                .build();
+        userRepository.save(system);
+
+        List<SeedBook> seeds = List.of(
+            new SeedBook("파우스트",
+                "요한 볼프강 폰 괴테",
+                "인류 문학의 최고 걸작 중 하나. 지식을 향한 인간의 탐구와 악마 메피스토펠레스와의 계약을 그린 독일 문학의 정수.",
+                "https://www.gutenberg.org/cache/epub/14591/pg14591.cover.medium.jpg",
+                "https://www.gutenberg.org/files/14591/14591-0.txt"),
+            new SeedBook("데미안",
+                "헤르만 헤세",
+                "자아 발견의 여정을 그린 성장 소설. '새는 알에서 나오려고 투쟁한다'는 유명한 구절로 시작되는 철학적 소설.",
+                "https://www.gutenberg.org/cache/epub/24455/pg24455.cover.medium.jpg",
+                "https://www.gutenberg.org/files/24455/24455-0.txt"),
+            new SeedBook("변신",
+                "프란츠 카프카",
+                "어느 날 아침 벌레로 변해버린 그레고르 잠자의 이야기. 현대인의 소외와 부조리를 상징적으로 표현한 카프카의 대표작.",
+                "https://www.gutenberg.org/cache/epub/5200/pg5200.cover.medium.jpg",
+                "https://www.gutenberg.org/files/5200/5200-0.txt"),
+            new SeedBook("노인과 바다",
+                "어니스트 헤밍웨이",
+                "늙은 어부 산티아고가 홀로 바다에서 거대한 청새치와 사투를 벌이는 이야기. 인간의 용기와 투지를 담은 노벨상 수상작.",
+                "https://www.gutenberg.org/cache/epub/2778/pg2778.cover.medium.jpg",
+                "https://www.gutenberg.org/files/2778/2778-0.txt"),
+            new SeedBook("어린 왕자",
+                "앙투안 드 생텍쥐페리",
+                "사막에 불시착한 조종사와 소행성에서 온 어린 왕자의 만남. 어른들에게 잊혀진 어린 시절의 순수함과 사랑을 일깨우는 작품.",
+                "https://www.gutenberg.org/cache/epub/61/pg61.cover.medium.jpg",
+                "https://www.gutenberg.org/files/61/61-0.txt"),
+            new SeedBook("죄와 벌",
+                "표도르 도스토예프스키",
+                "가난한 법학도 라스콜니코프가 '비범한 인간은 죄를 저질러도 된다'는 이론을 실험하는 심리 소설의 걸작.",
+                "https://www.gutenberg.org/cache/epub/2554/pg2554.cover.medium.jpg",
+                "https://www.gutenberg.org/files/2554/2554-0.txt"),
+            new SeedBook("오만과 편견",
+                "제인 오스틴",
+                "19세기 영국 사회를 배경으로 엘리자베스 베넷과 다아시의 사랑 이야기. 오만과 편견을 극복하는 과정을 위트 있게 그린 명작.",
+                "https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg",
+                "https://www.gutenberg.org/files/1342/1342-0.txt"),
+            new SeedBook("모비딕",
+                "허먼 멜빌",
+                "에이해브 선장과 흰 고래 모비딕의 집착과 복수를 그린 미국 문학의 걸작. 인간의 광기와 자연의 힘을 서사적으로 묘사.",
+                "https://www.gutenberg.org/cache/epub/2701/pg2701.cover.medium.jpg",
+                "https://www.gutenberg.org/files/2701/2701-0.txt"),
+            new SeedBook("1984",
+                "조지 오웰",
+                "전체주의 국가 오세아니아를 배경으로 '빅 브라더'의 감시 사회를 그린 디스토피아 소설. 현대 사회에 강력한 경고를 던지는 작품.",
+                "https://www.gutenberg.org/cache/epub/71303/pg71303.cover.medium.jpg",
+                "https://www.gutenberg.org/files/71303/71303-0.txt"),
+            new SeedBook("동물농장",
+                "조지 오웰",
+                "동물들이 인간에게 반란을 일으켜 스스로 농장을 운영하는 우화. 전체주의와 권력의 부패를 풍자적으로 그린 정치 소설.",
+                "https://www.gutenberg.org/cache/epub/67979/pg67979.cover.medium.jpg",
+                "https://www.gutenberg.org/files/67979/67979-0.txt")
+        );
+
+        for (SeedBook s : seeds) {
+            MyBook book = MyBook.builder()
+                    .title(s.title())
+                    .description(s.author() + " 저. " + s.description())
+                    .imageUrl(s.imageUrl())
+                    .fileUrl(s.fileUrl())
+                    .owner(system)
+                    .purchasedFromSite(true)
+                    .build();
+            myBookRepository.save(book);
+        }
+
+        log.info("시드 데이터 10권 추가 완료.");
+    }
+
+    private record SeedBookstore(String title, String author, String description,
+                                 String coverImageUrl, String epubUrl,
+                                 Long price, Book.Category category) {}
+
+    private record SeedBook(String title, String author, String description,
+                             String imageUrl, String fileUrl) {}
+}

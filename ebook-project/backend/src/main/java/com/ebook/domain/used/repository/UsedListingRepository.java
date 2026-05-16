@@ -1,0 +1,21 @@
+package com.ebook.domain.used.repository;
+
+import com.ebook.domain.used.entity.UsedListing;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface UsedListingRepository extends JpaRepository<UsedListing, Long> {
+
+    @Query("SELECT u FROM UsedListing u JOIN u.book b WHERE " +
+           "u.status = 'ACTIVE' AND " +
+           "(:keyword IS NULL OR b.title LIKE %:keyword% OR b.author LIKE %:keyword%) AND " +
+           "(:priceType IS NULL OR u.priceType = :priceType)")
+    Page<UsedListing> searchListings(
+            @Param("keyword") String keyword,
+            @Param("priceType") UsedListing.PriceType priceType,
+            Pageable pageable
+    );
+}
