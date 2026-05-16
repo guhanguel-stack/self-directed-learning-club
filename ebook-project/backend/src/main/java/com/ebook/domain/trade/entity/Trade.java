@@ -66,11 +66,15 @@ public class Trade {
         this.status = TradeStatus.REJECTED;
     }
 
+    public void cancel() {
+        this.status = TradeStatus.CANCELLED;
+    }
+
     public enum TradeType {
         POINT, EXCHANGE
     }
 
     public enum TradeStatus {
-        PENDING, COMPLETED, REJECTED
+        PENDING, COMPLETED, REJECTED, CANCELLED
     }
 }

@@ -37,11 +37,6 @@ public class LibraryService {
     // 도서 구매 (포인트 차감 + 서재 추가)
     @Transactional
     public void purchaseBook(Long userId, Long bookId) {
-        // 이미 보유 중인지 확인
-        if (libraryRepository.existsByUserIdAndBookId(userId, bookId)) {
-            throw CustomException.badRequest("이미 보유 중인 도서입니다.");
-        }
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> CustomException.notFound("사용자를 찾을 수 없습니다."));
         Book book = bookRepository.findById(bookId)

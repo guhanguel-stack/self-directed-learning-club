@@ -55,14 +55,9 @@ public class UsedService {
     // 중고 등록
     @Transactional
     public void createListing(Long userId, UsedListingRequest request) {
-        // 내 서재에 있는 책인지 확인
-        Library library = libraryRepository.findByUserIdAndBookId(userId, request.getBookId())
-                .orElseThrow(() -> CustomException.badRequest("보유하지 않은 도서입니다."));
-
-        // 이미 중고 등록된 책인지 확인
-        if (!library.isAvailable()) {
-            throw CustomException.badRequest("이미 중고 등록 중인 도서입니다.");
-        }
+        // 보유 중인 책 중 사용 가능한 권 확인
+        Library library = libraryRepository.findFirstByUserIdAndBookIdAndIsAvailable(userId, request.getBookId(), true)
+                .orElseThrow(() -> CustomException.badRequest("보유하지 않은 도서이거나 이미 중고 등록 중인 도서입니다."));
 
         // POINT 거래인데 가격이 없으면 에러
         if (request.getPriceType() == UsedListing.PriceType.POINT && request.getPointPrice() == null) {
@@ -101,8 +96,8 @@ public class UsedService {
             throw CustomException.badRequest("취소할 수 없는 상태입니다.");
         }
 
-        // 서재 상태 복원
-        Library library = libraryRepository.findByUserIdAndBookId(userId, listing.getBook().getId())
+        // 서재 상태 복원 (등록 중인 권)
+        Library library = libraryRepository.findFirstByUserIdAndBookIdAndIsAvailable(userId, listing.getBook().getId(), false)
                 .orElseThrow(() -> CustomException.notFound("서재 정보를 찾을 수 없습니다."));
         library.markAsAvailable();
 
@@ -133,8 +128,8 @@ public class UsedService {
         buyer.deductPoint(listing.getPointPrice());
         seller.chargePoint(listing.getPointPrice());
 
-        // 서재 소유권 변경
-        Library sellerLibrary = libraryRepository.findByUserIdAndBookId(seller.getId(), listing.getBook().getId())
+        // 판매자 서재에서 등록 중인 권 삭제
+        Library sellerLibrary = libraryRepository.findFirstByUserIdAndBookIdAndIsAvailable(seller.getId(), listing.getBook().getId(), false)
                 .orElseThrow(() -> CustomException.notFound("판매자 서재 정보를 찾을 수 없습니다."));
         libraryRepository.delete(sellerLibrary);
 
@@ -174,17 +169,29 @@ public class UsedService {
             throw CustomException.badRequest("본인의 게시글에는 교환 신청할 수 없습니다.");
         }
 
-        // 신청자가 해당 책을 보유 중인지 확인
-        Library offeredLibrary = libraryRepository.findByUserIdAndBookId(buyerId, request.getOfferedBookId())
-                .orElseThrow(() -> CustomException.badRequest("보유하지 않은 도서입니다."));
+        // 신청자가 해당 책을 보유 중인지 확인 (어떤 상태든)
+        if (!libraryRepository.existsByUserIdAndBookId(buyerId, request.getOfferedBookId())) {
+            throw CustomException.badRequest("보유하지 않은 도서입니다.");
+        }
 
-        // 제시 책이 중고 등록 중이면 자동으로 해당 등록을 취소
-        usedListingRepository.findBySellerIdAndBookIdAndStatus(
-                buyerId, request.getOfferedBookId(), UsedListing.ListingStatus.ACTIVE)
-            .ifPresent(existingListing -> {
-                existingListing.cancel();
-                offeredLibrary.markAsAvailable();
-            });
+        // 사용 가능한 권이 없는 경우, ACTIVE 등록 중인 권을 자동 취소해 사용 가능하게 만듦
+        boolean hasAvailableCopy = libraryRepository
+                .findFirstByUserIdAndBookIdAndIsAvailable(buyerId, request.getOfferedBookId(), true)
+                .isPresent();
+
+        if (!hasAvailableCopy) {
+            usedListingRepository.findBySellerIdAndBookIdAndStatus(
+                            buyerId, request.getOfferedBookId(), UsedListing.ListingStatus.ACTIVE)
+                    .stream().findFirst()
+                    .ifPresent(existingListing -> {
+                        existingListing.cancel();
+                        libraryRepository.findFirstByUserIdAndBookIdAndIsAvailable(
+                                        buyerId, request.getOfferedBookId(), false)
+                                .ifPresent(Library::markAsAvailable);
+                    });
+        }
+        // 보유 중인 권이 RESERVED 상태(다른 교환 신청 중)인 경우에도 신청 허용
+        // → 이 교환이 성사되면 RESERVED 목록 및 해당 거래가 자동 취소됨
 
         User buyer = userRepository.findById(buyerId)
                 .orElseThrow(() -> CustomException.notFound("사용자를 찾을 수 없습니다."));
@@ -219,11 +226,16 @@ public class UsedService {
         Long listingBookId = trade.getListing().getBook().getId();
         Long offeredBookId = trade.getOfferedBookId();
 
-        // 서재 교환 처리
-        Library sellerLibrary = libraryRepository.findByUserIdAndBookId(seller.getId(), listingBookId)
+        // 서재 교환 처리: 등록 중인 권(isAvailable=false) 우선 삭제
+        Library sellerLibrary = libraryRepository.findFirstByUserIdAndBookIdAndIsAvailable(seller.getId(), listingBookId, false)
                 .orElseThrow(() -> CustomException.notFound("판매자 서재 정보를 찾을 수 없습니다."));
-        Library buyerLibrary = libraryRepository.findByUserIdAndBookId(buyer.getId(), offeredBookId)
-                .orElseThrow(() -> CustomException.notFound("구매자 서재 정보를 찾을 수 없습니다."));
+
+        // 구매자의 제시 책: 사용 가능한 권 우선, 없으면 등록 중인 권 사용
+        Library buyerLibrary = libraryRepository
+                .findFirstByUserIdAndBookIdAndIsAvailable(buyer.getId(), offeredBookId, true)
+                .orElseGet(() -> libraryRepository
+                        .findFirstByUserIdAndBookIdAndIsAvailable(buyer.getId(), offeredBookId, false)
+                        .orElseThrow(() -> CustomException.notFound("구매자 서재 정보를 찾을 수 없습니다.")));
 
         libraryRepository.delete(sellerLibrary);
         libraryRepository.delete(buyerLibrary);
@@ -235,6 +247,18 @@ public class UsedService {
 
         libraryRepository.save(Library.builder().user(buyer).book(listingBook).build());
         libraryRepository.save(Library.builder().user(seller).book(offeredBook).build());
+
+        // 구매자가 제시한 책의 잔여 권수 확인
+        // 잔여 권이 없으면 해당 책에 걸린 교환 목록 및 대기 중인 거래를 자동 취소
+        boolean buyerHasNoMoreCopies = libraryRepository.findByUserIdAndBookId(buyer.getId(), offeredBookId).isEmpty();
+        if (buyerHasNoMoreCopies) {
+            usedListingRepository.findActiveOrReservedBySellerIdAndBookId(buyer.getId(), offeredBookId)
+                    .forEach(orphanedListing -> {
+                        tradeRepository.findByListingIdAndStatus(orphanedListing.getId(), Trade.TradeStatus.PENDING)
+                                .forEach(Trade::cancel);
+                        orphanedListing.cancel();
+                    });
+        }
 
         trade.accept();
         trade.getListing().complete();
@@ -256,9 +280,9 @@ public class UsedService {
         trade.reject();
         trade.getListing().cancel();
 
-        // 판매자 서재 상태 복원
-        Library sellerLibrary = libraryRepository.findByUserIdAndBookId(
-                sellerId, trade.getListing().getBook().getId())
+        // 판매자 서재 상태 복원 (등록 중인 권)
+        Library sellerLibrary = libraryRepository.findFirstByUserIdAndBookIdAndIsAvailable(
+                        sellerId, trade.getListing().getBook().getId(), false)
                 .orElseThrow(() -> CustomException.notFound("판매자 서재 정보를 찾을 수 없습니다."));
         sellerLibrary.markAsAvailable();
     }

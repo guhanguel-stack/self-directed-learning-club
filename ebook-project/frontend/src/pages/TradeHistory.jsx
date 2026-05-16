@@ -5,9 +5,10 @@ import useAuthStore from '../store/authStore';
 import { formatDate } from '../utils/format';
 
 const STATUS = {
-  PENDING:   { label: '수락 대기 중', className: 'bg-yellow-50 text-yellow-600' },
-  COMPLETED: { label: '완료',         className: 'bg-green-50 text-green-600' },
-  REJECTED:  { label: '거절됨',       className: 'bg-red-50 text-red-500' },
+  PENDING:   { label: '수락 대기 중',  className: 'bg-yellow-50 text-yellow-600' },
+  COMPLETED: { label: '완료',          className: 'bg-green-50 text-green-600' },
+  REJECTED:  { label: '거절됨',        className: 'bg-red-50 text-red-500' },
+  CANCELLED: { label: '자동 취소됨',   className: 'bg-gray-100 text-gray-500' },
 };
 
 const BookCover = ({ url, alt, size = 'md' }) => {

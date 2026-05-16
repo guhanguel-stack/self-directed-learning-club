@@ -29,6 +29,18 @@ const Library = () => {
     if (isLoggedIn) fetchLibrary();
   }, [isLoggedIn]);
 
+  // 같은 bookId끼리 묶기
+  const groupedBooks = Object.values(
+    library.reduce((acc, item) => {
+      if (!acc[item.bookId]) {
+        acc[item.bookId] = { ...item, count: 0, listedCount: 0 };
+      }
+      acc[item.bookId].count++;
+      if (!item.available) acc[item.bookId].listedCount++;
+      return acc;
+    }, {})
+  );
+
   const openModal = (item) => {
     setModal(item);
     setPriceType('POINT');
@@ -83,7 +95,7 @@ const Library = () => {
         </button>
       </div>
 
-      {library.length === 0 ? (
+      {groupedBooks.length === 0 ? (
         <div className="text-center py-20 text-gray-400">
           <p className="text-4xl mb-4">📚</p>
           <p>보유한 도서가 없습니다.</p>
@@ -96,45 +108,62 @@ const Library = () => {
         </div>
       ) : (
         <div className="space-y-3">
-          {library.map((item) => (
-            <div
-              key={item.libraryId}
-              className="flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm"
-            >
-              <div className="w-12 h-16 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {item.coverImageUrl ? (
-                  <img src={item.coverImageUrl} alt={item.title} className="w-full h-full object-cover rounded" />
-                ) : (
-                  <span className="text-xl">📖</span>
-                )}
-              </div>
+          {groupedBooks.map((item) => {
+            const availableCount = item.count - item.listedCount;
+            const hasAvailable = availableCount > 0;
+            return (
+              <div
+                key={item.bookId}
+                className="flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm"
+              >
+                <div className="w-12 h-16 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {item.coverImageUrl ? (
+                    <img src={item.coverImageUrl} alt={item.title} className="w-full h-full object-cover rounded" />
+                  ) : (
+                    <span className="text-xl">📖</span>
+                  )}
+                </div>
 
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold truncate">{item.title}</h3>
-                <p className="text-sm text-gray-500">{item.author}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{formatDate(item.purchasedAt)} 구매</p>
-              </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold truncate">{item.title}</h3>
+                    {item.count > 1 && (
+                      <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-semibold flex-shrink-0">
+                        {item.count}권
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500">{item.author}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {item.count > 1
+                      ? `${availableCount}권 보유${item.listedCount > 0 ? ` · ${item.listedCount}권 거래 중` : ''}`
+                      : item.listedCount > 0
+                        ? '거래 중'
+                        : `${formatDate(item.purchasedAt)} 구매`}
+                  </p>
+                </div>
 
-              <div className="flex gap-2 flex-shrink-0">
-                <button
-                  onClick={() => navigate(`/reader/${item.bookId}`)}
-                  className="bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-lg text-sm hover:bg-indigo-100 transition"
-                >
-                  읽기
-                </button>
-                {item.available ? (
+                <div className="flex gap-2 flex-shrink-0">
                   <button
-                    onClick={() => openModal(item)}
-                    className="bg-orange-50 text-orange-600 px-4 py-1.5 rounded-lg text-sm hover:bg-orange-100 transition"
+                    onClick={() => navigate(`/reader/${item.bookId}`)}
+                    className="bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-lg text-sm hover:bg-indigo-100 transition"
                   >
-                    중고 등록
+                    읽기
                   </button>
-                ) : (
-                  <span className="text-xs text-orange-500 self-center px-2">거래 중</span>
-                )}
+                  {hasAvailable ? (
+                    <button
+                      onClick={() => openModal(item)}
+                      className="bg-orange-50 text-orange-600 px-4 py-1.5 rounded-lg text-sm hover:bg-orange-100 transition"
+                    >
+                      중고 등록
+                    </button>
+                  ) : (
+                    <span className="text-xs text-orange-500 self-center px-2">전권 거래 중</span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

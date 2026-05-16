@@ -8,6 +8,7 @@ import java.util.Optional;
 
 public interface LibraryRepository extends JpaRepository<Library, Long> {
     List<Library> findByUserId(Long userId);
-    Optional<Library> findByUserIdAndBookId(Long userId, Long bookId);
+    List<Library> findByUserIdAndBookId(Long userId, Long bookId);
+    Optional<Library> findFirstByUserIdAndBookIdAndIsAvailable(Long userId, Long bookId, boolean isAvailable);
     boolean existsByUserIdAndBookId(Long userId, Long bookId);
 }

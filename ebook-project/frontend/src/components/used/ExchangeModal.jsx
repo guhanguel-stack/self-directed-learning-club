@@ -15,6 +15,18 @@ const ExchangeModal = ({ listing, onClose, onSuccess }) => {
       .finally(() => setLoading(false));
   }, []);
 
+  // 같은 bookId끼리 묶기
+  const groupedBooks = Object.values(
+    myLibrary.reduce((acc, item) => {
+      if (!acc[item.bookId]) {
+        acc[item.bookId] = { ...item, count: 0, listedCount: 0 };
+      }
+      acc[item.bookId].count++;
+      if (!item.available) acc[item.bookId].listedCount++;
+      return acc;
+    }, {})
+  );
+
   const handleSubmit = async () => {
     if (!selectedBookId) {
       alert('교환할 책을 선택해주세요.');
@@ -82,7 +94,7 @@ const ExchangeModal = ({ listing, onClose, onSuccess }) => {
         <div className="flex-1 overflow-y-auto min-h-0">
           {loading ? (
             <p className="text-center text-gray-400 py-10">로딩 중...</p>
-          ) : myLibrary.length === 0 ? (
+          ) : groupedBooks.length === 0 ? (
             <div className="text-center py-10 bg-gray-50 rounded-xl">
               <p className="text-4xl mb-3">📚</p>
               <p className="text-gray-600 font-medium">교환 가능한 책이 없습니다</p>
@@ -90,8 +102,9 @@ const ExchangeModal = ({ listing, onClose, onSuccess }) => {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2">
-              {myLibrary.map((book) => {
-                const isListed = book.available === false;
+              {groupedBooks.map((book) => {
+                const availableCount = book.count - book.listedCount;
+                const allListed = availableCount === 0;
                 return (
                   <button
                     key={book.bookId}
@@ -114,10 +127,24 @@ const ExchangeModal = ({ listing, onClose, onSuccess }) => {
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold truncate">{book.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold truncate">{book.title}</p>
+                        {book.count > 1 && (
+                          <span className="text-xs bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">
+                            {book.count}권
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500 truncate">{book.author}</p>
-                      {isListed && (
-                        <p className="text-xs text-orange-500 mt-0.5">중고 등록 중 · 선택 시 등록 자동 취소</p>
+                      {allListed && (
+                        <p className="text-xs text-orange-500 mt-0.5">
+                          전권 중고 등록 중 · 선택 시 등록 자동 취소
+                        </p>
+                      )}
+                      {!allListed && book.listedCount > 0 && (
+                        <p className="text-xs text-orange-400 mt-0.5">
+                          {book.listedCount}권 거래 중 · 나머지 {availableCount}권으로 교환
+                        </p>
                       )}
                     </div>
                     {selectedBookId === book.bookId && (
@@ -139,7 +166,7 @@ const ExchangeModal = ({ listing, onClose, onSuccess }) => {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!selectedBookId || submitting || myLibrary.length === 0}
+            disabled={!selectedBookId || submitting || groupedBooks.length === 0}
             className="flex-1 py-3 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? '신청 중...' : '교환 신청하기'}
